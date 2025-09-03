@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Irrigation Control - Agriculture Automation Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="../styles/main.css" rel="stylesheet">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <i class="fas fa-leaf"></i>
+            <span>AgriTech</span>
+        </div>
+        
+        <div class="nav-section">
+            <div class="nav-title">Dashboards</div>
+            <ul class="nav-items">
+                <li class="nav-item">
+                    <a href="../index.html">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Overview</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="tracking.html">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Tracking</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="crops.html">
+                        <i class="fas fa-leaf"></i>
+                        <span>Crops</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="fault.html">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Fault</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="irrigation.html">
+                        <i class="fas fa-tint"></i>
+                        <span>Irrigation</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Management</div>
+            <ul class="nav-items">
+                <li class="nav-item">
+                    <a href="#">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#">
+                        <i class="fas fa-question-circle"></i>
+                        <span>Help</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="top-bar">
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search...">
+            </div>
+            
+            <div class="top-bar-actions">
+                <div class="icon-button" id="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </div>
+                <div class="icon-button">
+                    <i class="fas fa-bell"></i>
+                    <div class="notification-badge">3</div>
+                </div>
+                <div class="icon-button">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-container">
+            <div class="card field-layout">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="card-title">
+                        <i class="fas fa-tint"></i>
+        Field Irrigation Control
+                    </div>
+                    <button id="motorBtn" class="btn btn-danger">
+                        <i class="fas fa-power-off me-2"></i>
+                        Turn Motor ON
+                    </button>
+    </div>
+    <div class="field-container">
+        <div class="field-content">
+            <!-- Main Pipeline -->
+            <div class="pipeline horizontal" style="top: 30%; left: 10%; width: 80%;"></div>
+            
+            <!-- Vertical Pipelines -->
+            <div class="pipeline vertical" style="top: 30%; left: 25%; height: 40%;"></div>
+            <div class="pipeline vertical" style="top: 30%; left: 50%; height: 40%;"></div>
+            <div class="pipeline vertical" style="top: 30%; left: 75%; height: 40%;"></div>
+
+            <!-- Solenoid Valves -->
+            <div class="solenoid-valve" data-valve-id="1" style="top: 28%; left: 23%;">
+                            <i class="fas fa-faucet"></i>
+                <div class="valve-label">Valve 1</div>
+            </div>
+            <div class="solenoid-valve" data-valve-id="2" style="top: 28%; left: 48%;">
+                            <i class="fas fa-faucet"></i>
+                <div class="valve-label">Valve 2</div>
+            </div>
+            <div class="solenoid-valve" data-valve-id="3" style="top: 28%; left: 73%;">
+                            <i class="fas fa-faucet"></i>
+                <div class="valve-label">Valve 3</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <i class="fas fa-chart-line"></i>
+                                Water Flow Rate
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="flowRateChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <i class="fas fa-tint"></i>
+                                Water Level
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="waterLevelChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mobile-menu">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <style>
+        .grid-container {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            padding: 24px;
+        }
+
+        .field-layout {
+            width: 100%;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .field-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 24px 0;
+        }
+
+        .field-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .pipeline {
+            position: absolute;
+            background-color: var(--border-color);
+            transition: background-color 0.3s ease;
+        }
+
+        .pipeline.horizontal {
+            height: 4px;
+        }
+
+        .pipeline.vertical {
+            width: 4px;
+        }
+
+        .solenoid-valve {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .solenoid-valve i {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .solenoid-valve:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .solenoid-valve.open {
+            background-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.2);
+        }
+
+        .valve-label {
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .chart-container {
+            height: 200px;
+            position: relative;
+            padding: 16px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .card-title i {
+            color: var(--primary-color);
+        }
+
+        @media (max-width: 1024px) {
+            .grid-container {
+                padding: 16px;
+            }
+
+            .row {
+                flex-direction: column;
+            }
+        }
+    </style>
+
+<script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        const body = document.body;
+        
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = body.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+            }
+            updateChartsTheme();
+        });
+
+        // Mobile menu functionality
+        const mobileMenu = document.querySelector('.mobile-menu');
+        const sidebar = document.querySelector('.sidebar');
+        
+        mobileMenu.addEventListener('click', () => {
+            sidebar.classList.toggle('show');
+        });
+
+        // Socket connection
+        const socket = io();
+
+    // Motor control
+    const motorBtn = document.getElementById('motorBtn');
+    
+    socket.on('motorStatus', (status) => {
+            motorBtn.innerHTML = status ? 
+                '<i class="fas fa-power-off me-2"></i>Turn Motor OFF' : 
+                '<i class="fas fa-power-off me-2"></i>Turn Motor ON';
+        motorBtn.className = status ? 'btn btn-success' : 'btn btn-danger';
+    });
+
+    motorBtn.addEventListener('click', () => {
+        socket.emit('toggleMotor');
+    });
+
+    // Valve control
+    function loadValveStates() {
+        fetch('/api/valve/states')
+            .then(response => response.json())
+            .then(states => {
+                Object.entries(states).forEach(([valveId, isOpen]) => {
+                    const valve = document.querySelector(`.solenoid-valve[data-valve-id="${valveId}"]`);
+                    if (valve) {
+                        if (isOpen) {
+                            valve.classList.add('open');
+                        } else {
+                            valve.classList.remove('open');
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error loading valve states:', error);
+            });
+    }
+
+    document.querySelectorAll('.solenoid-valve').forEach(valve => {
+        valve.addEventListener('click', function() {
+            const valveId = this.getAttribute('data-valve-id');
+            const isCurrentlyOpen = this.classList.contains('open');
+            const newState = !isCurrentlyOpen;
+            
+            this.classList.toggle('open');
+            
+            fetch('/api/valve/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    valveId: valveId,
+                    state: newState
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    this.classList.toggle('open');
+                    console.error('Failed to update valve state:', data.error);
+                }
+            })
+            .catch(error => {
+                this.classList.toggle('open');
+                console.error('Error updating valve state:', error);
+            });
+        });
+    });
+
+    // Load initial valve states
+    loadValveStates();
+
+        // Initialize charts
+        const flowRateCtx = document.getElementById('flowRateChart').getContext('2d');
+        const waterLevelCtx = document.getElementById('waterLevelChart').getContext('2d');
+
+        const flowRateChart = new Chart(flowRateCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Flow Rate (L/min)',
+                    data: [],
+                    borderColor: '#2196F3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: getComputedStyle(document.body).getPropertyValue('--border-color')
+                        },
+                        ticks: {
+                            color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: getComputedStyle(document.body).getPropertyValue('--border-color')
+                        },
+                        ticks: {
+                            color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+                        }
+                    }
+                }
+            }
+        });
+
+        const waterLevelChart = new Chart(waterLevelCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Water Level (%)',
+                    data: [],
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            color: getComputedStyle(document.body).getPropertyValue('--border-color')
+                        },
+                        ticks: {
+                            color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: getComputedStyle(document.body).getPropertyValue('--border-color')
+                        },
+                        ticks: {
+                            color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+                        }
+                    }
+                }
+            }
+        });
+
+        // Update charts with sensor data
+        socket.on('sensorData', (data) => {
+            const timestamp = new Date().toLocaleTimeString();
+            
+            // Update flow rate chart
+            if (flowRateChart.data.labels.length > 10) {
+                flowRateChart.data.labels.shift();
+                flowRateChart.data.datasets[0].data.shift();
+            }
+            flowRateChart.data.labels.push(timestamp);
+            flowRateChart.data.datasets[0].data.push(data.flowRate || 0);
+            flowRateChart.update('active');
+
+            // Update water level chart
+            if (waterLevelChart.data.labels.length > 10) {
+                waterLevelChart.data.labels.shift();
+                waterLevelChart.data.datasets[0].data.shift();
+            }
+            waterLevelChart.data.labels.push(timestamp);
+            waterLevelChart.data.datasets[0].data.push(data.waterLevel || 0);
+            waterLevelChart.update('active');
+        });
+
+        // Update chart themes
+        function updateChartsTheme() {
+            const textColor = getComputedStyle(document.body).getPropertyValue('--text-secondary');
+            const borderColor = getComputedStyle(document.body).getPropertyValue('--border-color');
+            const charts = [flowRateChart, waterLevelChart];
+            
+            charts.forEach(chart => {
+                chart.options.scales.y.grid.color = borderColor;
+                chart.options.scales.x.grid.color = borderColor;
+                chart.options.scales.y.ticks.color = textColor;
+                chart.options.scales.x.ticks.color = textColor;
+                chart.update();
+            });
+        }
+</script> 
+</body>
+</html> 

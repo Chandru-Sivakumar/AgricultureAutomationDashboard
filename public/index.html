@@ -1,0 +1,2532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Farmers - Agriculture Automation Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #2196F3;
+      --primary-light: #64B5F6;
+      --primary-dark: #1976D2;
+      --success-color: #4CAF50;
+      --warning-color: #FFC107;
+      --danger-color: #F44336;
+      --sidebar-bg: #0A1929;
+      --card-bg: #ffffff;
+      --text-primary: #1A2027;
+      --text-secondary: #3E5060;
+      --border-color: #E5EAF2;
+      --hover-bg: #F0F7FF;
+      --transition-speed: 0.3s;
+    }
+
+    [data-theme="dark"] {
+      --primary-color: #2196F3;
+      --primary-light: #1E88E5;
+      --primary-dark: #1565C0;
+      --sidebar-bg: #0A1929;
+      --card-bg: #101F33;
+      --text-primary: #ffffff;
+      --text-secondary: #B2BAC2;
+      --border-color: #1E4976;
+      --hover-bg: #132F4C;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(0); }
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #F3F6F9;
+      color: var(--text-primary);
+      display: flex;
+      min-height: 100vh;
+      transition: background-color var(--transition-speed) ease;
+    }
+
+    /* Sidebar Styles */
+    .sidebar {
+      width: 280px;
+      background-color: var(--sidebar-bg);
+      height: 100vh;
+      position: fixed;
+      padding: 24px 0;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      transition: all var(--transition-speed) ease;
+      animation: slideIn 0.5s ease;
+    }
+
+    .logo {
+      padding: 0 24px;
+      margin-bottom: 24px;
+      font-size: 24px;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo i {
+      color: var(--primary-color);
+    }
+
+    .nav-section {
+      margin-bottom: 24px;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .nav-title {
+      padding: 0 24px;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+
+    .nav-items {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .nav-item {
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .nav-item a {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .nav-item:hover {
+      background-color: var(--hover-bg);
+      color: var(--primary-color);
+    }
+
+    .nav-item.active {
+      background-color: var(--hover-bg);
+      color: var(--primary-color);
+      border-right: 3px solid var(--primary-color);
+    }
+
+    .nav-item i {
+      margin-right: 12px;
+      width: 20px;
+      text-align: center;
+      transition: transform 0.2s ease;
+    }
+
+    .nav-item:hover i {
+      transform: scale(1.1);
+    }
+
+    /* Main Content Styles */
+    .main-container {
+      flex: 1;
+      margin-left: 280px;
+      padding: 24px;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      background-color: var(--card-bg);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      background-color: var(--hover-bg);
+      border-radius: 8px;
+      padding: 8px 16px;
+      width: 300px;
+      transition: all 0.2s ease;
+    }
+
+    .search-bar:focus-within {
+      box-shadow: 0 0 0 2px var(--primary-color);
+    }
+
+    .search-bar input {
+      border: none;
+      background: none;
+      outline: none;
+      margin-left: 8px;
+      color: var(--text-primary);
+      width: 100%;
+      transition: all var(--transition-speed) ease;
+    }
+
+    .top-bar-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .icon-button {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .icon-button:hover {
+      background-color: var(--hover-bg);
+      color: var(--primary-color);
+      transform: translateY(-2px);
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background-color: var(--danger-color);
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 1s infinite;
+    }
+
+    /* Card Styles */
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      margin-bottom: 24px;
+      transition: all 0.3s ease;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title i {
+      color: var(--primary-color);
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Grid Layout */
+    .grid-container {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Chart Styles */
+    .chart-container {
+      height: 300px;
+      margin-bottom: 16px;
+    }
+
+    /* Status Indicators */
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      padding: 8px;
+      border-radius: 8px;
+      background-color: var(--hover-bg);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+
+    .status-dot.active {
+      background-color: var(--success-color);
+      box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.2);
+    }
+
+    .status-dot.inactive {
+      background-color: var(--danger-color);
+      box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.2);
+    }
+
+    /* Valve Controls */
+    .valve-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 16px;
+    }
+
+    .valve-control {
+      background-color: var(--hover-bg);
+      padding: 16px;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .valve-control:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .valve-control i {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: var(--primary-color);
+    }
+
+    /* Crop Form */
+    .crop-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .form-group input {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background-color: var(--hover-bg);
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .sidebar {
+        width: 80px;
+      }
+
+      .logo, .nav-title {
+      display: none;
+      }
+
+      .nav-item span {
+        display: none;
+      }
+
+      .main-container {
+        margin-left: 80px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+        z-index: 1000;
+      }
+
+      .sidebar.show {
+        transform: translateX(0);
+      }
+
+      .main-container {
+        margin-left: 0;
+      }
+
+      .search-bar {
+      display: none;
+    }
+
+      .mobile-menu {
+      display: block;
+    }
+    }
+
+    /* Mobile Menu Button */
+    .mobile-menu {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      color: white;
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1001;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transition: all 0.2s ease;
+    }
+
+    .mobile-menu:hover {
+      transform: scale(1.1);
+    }
+
+    .sensor-values {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      padding: 16px;
+      background-color: var(--hover-bg);
+      border-radius: 8px;
+    }
+
+    .sensor-value {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .sensor-value i {
+      font-size: 24px;
+      color: var(--primary-color);
+    }
+
+    .sensor-value .value {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .sensor-value .unit {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .crops-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .crop-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background-color: var(--hover-bg);
+      border-radius: 8px;
+      transition: transform 0.2s ease;
+    }
+
+    .crop-item:hover {
+      transform: translateY(-2px);
+    }
+
+    .crop-info {
+      flex: 1;
+    }
+
+    .crop-name {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .crop-growth {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .progress {
+      flex: 1;
+      height: 8px;
+      background-color: var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background-color: var(--primary-color);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .crop-growth span {
+      font-size: 14px;
+      color: var(--text-secondary);
+      min-width: 60px;
+    }
+
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .status-badge.healthy {
+      background-color: rgba(76, 175, 80, 0.1);
+      color: var(--success-color);
+    }
+
+    .status-badge.warning {
+      background-color: rgba(255, 193, 7, 0.1);
+      color: var(--warning-color);
+    }
+
+    .status-badge.danger {
+      background-color: rgba(244, 67, 54, 0.1);
+      color: var(--danger-color);
+    }
+
+    @media (max-width: 1024px) {
+      .sensor-values {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sensor-values {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .top-row {
+      display: grid;
+      grid-template-columns: 70% 30%;
+      gap: 24px;
+    }
+
+    .sensor-card {
+      height: 100%;
+    }
+
+    .crops-card {
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .irrigation-card {
+      width: 100%;
+    }
+
+    .page-content {
+      padding: 24px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .page-content:not(:first-child) {
+      display: none;
+    }
+
+    .tracking-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .tracking-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .fault-list {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .field-layout {
+      width: 100%;
+      margin-bottom: 24px;
+    }
+
+    .charts-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .charts-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Irrigation Page Styles */
+    .field-container {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 24px 0;
+    }
+
+    .field-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .pipeline {
+      position: absolute;
+      background-color: var(--border-color);
+      transition: background-color 0.3s ease;
+    }
+
+    .pipeline.horizontal {
+      height: 4px;
+    }
+
+    .pipeline.vertical {
+      width: 4px;
+    }
+
+    .solenoid-valve {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background-color: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      transform: translate(-50%, -50%);
+    }
+
+    .solenoid-valve i {
+      color: var(--text-secondary);
+      font-size: 20px;
+    }
+
+    .solenoid-valve:hover {
+      transform: translate(-50%, -50%) scale(1.1);
+      border-color: var(--primary-color);
+    }
+
+    .solenoid-valve.active {
+      border-color: var(--success-color);
+      background-color: rgba(76, 175, 80, 0.1);
+    }
+
+    .solenoid-valve.active i {
+      color: var(--success-color);
+    }
+
+    .valve-label {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    /* Fault Page Styles */
+    .sensor-node {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      background-color: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: translate(-50%, -50%);
+      transition: all 0.3s ease;
+    }
+
+    .sensor-node i {
+      font-size: 16px;
+      color: var(--text-secondary);
+    }
+
+    .sensor-node.working {
+      border-color: var(--success-color);
+    }
+
+    .sensor-node.working i {
+      color: var(--success-color);
+    }
+
+    .sensor-node.fault {
+      border-color: var(--danger-color);
+      animation: pulse 2s infinite;
+    }
+
+    .sensor-node.fault i {
+      color: var(--danger-color);
+    }
+
+    .sensor-node.off {
+      border-color: var(--text-secondary);
+      opacity: 0.5;
+    }
+
+    .fault-history {
+      padding: 16px;
+    }
+
+    .fault-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background-color: var(--hover-bg);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .fault-icon {
+      width: 40px;
+      height: 40px;
+      background-color: rgba(244, 67, 54, 0.1);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .fault-icon i {
+      color: var(--danger-color);
+      font-size: 20px;
+    }
+
+    .fault-details {
+      flex: 1;
+    }
+
+    .fault-title {
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .fault-time {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .fault-status {
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .fault-status.critical {
+      background-color: rgba(244, 67, 54, 0.1);
+      color: var(--danger-color);
+    }
+
+    .fault-status.warning {
+      background-color: rgba(255, 193, 7, 0.1);
+      color: var(--warning-color);
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background-color: var(--hover-bg);
+      border-radius: 8px;
+    }
+
+    .status-icon {
+      width: 40px;
+      height: 40px;
+      background-color: var(--card-bg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .status-icon i {
+      font-size: 20px;
+      color: var(--primary-color);
+    }
+
+    .status-info {
+      flex: 1;
+    }
+
+    .status-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .status-value {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .status-value.healthy {
+      color: var(--success-color);
+    }
+
+    .status-value.warning {
+      color: var(--warning-color);
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+    }
+
+    /* Crop Prediction Styles */
+    .crop-prediction-item {
+      background-color: var(--bg-secondary);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .crop-prediction-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .crop-prediction-item h5 {
+      color: var(--text-primary);
+    }
+
+    .crop-prediction-item p {
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+
+    .recommended-crops {
+      margin-top: 1rem;
+    }
+
+    .badge {
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">
+      <i class="fas fa-leaf"></i>
+      <span>The Farmers</span>
+    </div>
+    
+    <div class="nav-section">
+      <div class="nav-title">Dashboards</div>
+      <ul class="nav-items">
+        <li class="nav-item active" data-page="overview-page">
+          <a href="#overview">
+            <i class="fas fa-chart-pie"></i>
+            <span>Overview</span>
+          </a>
+        </li>
+        <li class="nav-item" data-page="tracking-page">
+          <a href="#tracking">
+      <i class="fas fa-chart-line"></i>
+      <span>Tracking</span>
+          </a>
+        </li>
+        <li class="nav-item" data-page="crops-page">
+          <a href="#crops">
+            <i class="fas fa-leaf"></i>
+            <span>Crops</span>
+          </a>
+        </li>
+        <li class="nav-item" data-page="fault-page">
+          <a href="#fault">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Fault</span>
+          </a>
+        </li>
+        <li class="nav-item" data-page="irrigation-page">
+          <a href="#irrigation">
+            <i class="fas fa-tint"></i>
+            <span>Irrigation</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-title">Management</div>
+      <ul class="nav-items">
+        <li class="nav-item">
+          <i class="fas fa-cog"></i>
+          <span>Settings</span>
+        </li>
+        <li class="nav-item">
+          <i class="fas fa-question-circle"></i>
+          <span>Help</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <div class="top-bar">
+      <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Search...">
+      </div>
+      
+      <div class="top-bar-actions">
+        <div class="icon-button" id="theme-toggle">
+          <i class="fas fa-moon"></i>
+        </div>
+        <div class="icon-button">
+          <i class="fas fa-bell"></i>
+          <div class="notification-badge">3</div>
+        </div>
+        <div class="icon-button">
+          <i class="fas fa-user"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overview Page -->
+    <div class="page-content" id="overview-page">
+      <div class="grid-container">
+        <div class="top-row">
+          <!-- Live Sensor Data Card -->
+          <div class="card sensor-card">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fas fa-chart-line"></i>
+                Live Sensor Data
+              </div>
+              <div class="card-actions">
+                <div class="status">
+                  <div class="status-dot active"></div>
+                  <span>Live</span>
+                </div>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="sensorChart"></canvas>
+            </div>
+            <div class="sensor-values">
+              <div class="sensor-value">
+                <i class="fas fa-temperature-high"></i>
+                <span class="value" id="tempValue">--</span>
+                <span class="unit">°C</span>
+              </div>
+              <div class="sensor-value">
+                <i class="fas fa-tint"></i>
+                <span class="value" id="humValue">--</span>
+                <span class="unit">%</span>
+              </div>
+              <div class="sensor-value">
+      <i class="fas fa-water"></i>
+                <span class="value" id="moistValue">--</span>
+                <span class="unit">%</span>
+    </div>
+              <div class="sensor-value">
+                <i class="fas fa-fill-drip"></i>
+                <span class="value" id="waterValue">--</span>
+                <span class="unit">%</span>
+    </div>
+            </div>
+          </div>
+
+          <!-- Crops Status Card -->
+          <div class="card crops-card">
+            <div class="card-header">
+              <div class="card-title">
+      <i class="fas fa-seedling"></i>
+                Crops Status
+              </div>
+            </div>
+            <div class="crops-list">
+              <div class="crop-item">
+                <div class="crop-info">
+                  <div class="crop-name">Tomatoes</div>
+                  <div class="crop-growth">
+                    <div class="progress">
+                      <div class="progress-bar" style="width: 75%"></div>
+                    </div>
+                    <span>75% Growth</span>
+                  </div>
+                </div>
+                <div class="crop-status">
+                  <span class="status-badge healthy">Healthy</span>
+                </div>
+              </div>
+              <div class="crop-item">
+                <div class="crop-info">
+                  <div class="crop-name">Potatoes</div>
+                  <div class="crop-growth">
+                    <div class="progress">
+                      <div class="progress-bar" style="width: 45%"></div>
+                    </div>
+                    <span>45% Growth</span>
+                  </div>
+                </div>
+                <div class="crop-status">
+                  <span class="status-badge warning">Mild Disease</span>
+                </div>
+              </div>
+              <div class="crop-item">
+                <div class="crop-info">
+                  <div class="crop-name">Carrots</div>
+                  <div class="crop-growth">
+                    <div class="progress">
+                      <div class="progress-bar" style="width: 30%"></div>
+                    </div>
+                    <span>30% Growth</span>
+                  </div>
+                </div>
+                <div class="crop-status">
+                  <span class="status-badge healthy">Healthy</span>
+                </div>
+              </div>
+              <div class="crop-item">
+                <div class="crop-info">
+                  <div class="crop-name">Lettuce</div>
+                  <div class="crop-growth">
+                    <div class="progress">
+                      <div class="progress-bar" style="width: 90%"></div>
+                    </div>
+                    <span>90% Growth</span>
+                  </div>
+                </div>
+                <div class="crop-status">
+                  <span class="status-badge danger">Disease Detected</span>
+                </div>
+              </div>
+            </div>
+    </div>
+  </div>
+
+        <!-- Irrigation Control Card -->
+        <div class="card irrigation-card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-tint"></i>
+              Irrigation Control
+            </div>
+            <div class="card-actions">
+              <button id="motorToggleBtn" class="btn btn-danger">
+                <i class="fas fa-power-off me-2"></i>
+                Turn Motor ON
+              </button>
+            </div>
+          </div>
+          <div id="motorStatus" class="status">
+            <div class="status-dot inactive"></div>
+            <span>Motor is currently OFF</span>
+          </div>
+          <div id="valveControls" class="valve-grid">
+            <div class="valve-control">
+              <i class="fas fa-faucet"></i>
+              <div>Valve 1</div>
+              <div class="status">
+                <div class="status-dot inactive"></div>
+                <span>Closed</span>
+              </div>
+            </div>
+            <div class="valve-control">
+              <i class="fas fa-faucet"></i>
+              <div>Valve 2</div>
+              <div class="status">
+                <div class="status-dot inactive"></div>
+                <span>Closed</span>
+              </div>
+            </div>
+            <div class="valve-control">
+              <i class="fas fa-faucet"></i>
+              <div>Valve 3</div>
+              <div class="status">
+                <div class="status-dot inactive"></div>
+                <span>Closed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tracking Page -->
+    <div class="page-content" id="tracking-page" style="display: none;">
+      <div class="grid-container tracking-grid">
+        <!-- Temperature Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-temperature-high"></i>
+              Temperature Analysis
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="tempAnalysisChart"></canvas>
+          </div>
+          <div class="sensor-values">
+            <div class="sensor-value">
+              <i class="fas fa-temperature-high"></i>
+              <span class="value" id="avgTemp">--</span>
+              <span class="unit">°C</span>
+              <span class="label">Average</span>
+            </div>
+            <div class="sensor-value">
+              <i class="fas fa-arrow-up"></i>
+              <span class="value" id="maxTemp">--</span>
+              <span class="unit">°C</span>
+              <span class="label">Maximum</span>
+            </div>
+            <div class="sensor-value">
+              <i class="fas fa-arrow-down"></i>
+              <span class="value" id="minTemp">--</span>
+              <span class="unit">°C</span>
+              <span class="label">Minimum</span>
+            </div>
+    </div>
+        </div>
+
+        <!-- Humidity Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-tint"></i>
+              Humidity Analysis
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="humAnalysisChart"></canvas>
+          </div>
+          <div class="sensor-values">
+            <div class="sensor-value">
+              <i class="fas fa-tint"></i>
+              <span class="value" id="avgHum">--</span>
+              <span class="unit">%</span>
+              <span class="label">Average</span>
+            </div>
+            <div class="sensor-value">
+              <i class="fas fa-arrow-up"></i>
+              <span class="value" id="maxHum">--</span>
+              <span class="unit">%</span>
+              <span class="label">Maximum</span>
+            </div>
+            <div class="sensor-value">
+              <i class="fas fa-arrow-down"></i>
+              <span class="value" id="minHum">--</span>
+              <span class="unit">%</span>
+              <span class="label">Minimum</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Soil Moisture Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-water"></i>
+              Soil Moisture Analysis
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="moistAnalysisChart"></canvas>
+          </div>
+          <div class="sensor-values">
+            <div class="sensor-value">
+              <i class="fas fa-water"></i>
+              <span class="value" id="avgMoist">--</span>
+              <span class="unit">%</span>
+              <span class="label">Average</span>
+            </div>
+            <div class="sensor-value">
+              <i class="fas fa-arrow-up"></i>
+              <span class="value" id="maxMoist">--</span>
+              <span class="unit">%</span>
+              <span class="label">Maximum</span>
+            </div>
+            <div class="sensor-value">
+              <i class="fas fa-arrow-down"></i>
+              <span class="value" id="minMoist">--</span>
+              <span class="unit">%</span>
+              <span class="label">Minimum</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Water Level Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-fill-drip"></i>
+              Water Level Analysis
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="waterAnalysisChart"></canvas>
+          </div>
+          <div class="sensor-values">
+            <div class="sensor-value">
+              <i class="fas fa-fill-drip"></i>
+              <span class="value" id="avgWater">--</span>
+              <span class="unit">%</span>
+              <span class="label">Average</span>
+            </div>
+            <div class="sensor-value">
+              <i class="fas fa-arrow-up"></i>
+              <span class="value" id="maxWater">--</span>
+              <span class="unit">%</span>
+              <span class="label">Maximum</span>
+            </div>
+            <div class="sensor-value">
+              <i class="fas fa-arrow-down"></i>
+              <span class="value" id="minWater">--</span>
+              <span class="unit">%</span>
+              <span class="label">Minimum</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Crops Page -->
+    <div class="page-content" id="crops-page" style="display: none;">
+      <div class="grid-container">
+        <!-- Crop Prediction Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-seedling"></i>
+              Crop Prediction
+            </div>
+          </div>
+          <form class="crop-form" id="predictionForm">
+            <div class="form-group">
+              <label for="nitrogen">Nitrogen (N)</label>
+              <input type="number" id="nitrogen" min="0" max="140" step="1" required placeholder="0-140 mg/kg">
+            </div>
+            <div class="form-group">
+              <label for="phosphorus">Phosphorus (P)</label>
+              <input type="number" id="phosphorus" min="0" max="140" step="1" required placeholder="0-140 mg/kg">
+            </div>
+            <div class="form-group">
+              <label for="potassium">Potassium (K)</label>
+              <input type="number" id="potassium" min="0" max="200" step="1" required placeholder="0-200 mg/kg">
+            </div>
+            <div class="form-group">
+              <label for="temperature">Temperature</label>
+              <input type="number" id="temperature" min="0" max="50" step="0.1" required placeholder="°C">
+            </div>
+            <div class="form-group">
+              <label for="humidity">Humidity</label>
+              <input type="number" id="humidity" min="0" max="100" step="0.1" required placeholder="%">
+            </div>
+            <div class="form-group">
+              <label for="ph">pH Level</label>
+              <input type="number" id="ph" min="0" max="14" step="0.1" required placeholder="0-14">
+            </div>
+            <div class="form-group">
+              <label for="rainfall">Rainfall</label>
+              <input type="number" id="rainfall" min="0" max="300" step="0.1" required placeholder="mm">
+            </div>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary mt-3">Get Prediction</button>
+              <button type="button" class="btn btn-secondary mt-3" id="fillRandomBtn" style="display: none;">
+                <i class="fas fa-random me-2"></i>Fill Random Values
+              </button>
+            </div>
+          </form>
+          <div id="predictionResult" class="mt-4" style="display: none;">
+            <h4>Recommended Crops</h4>
+            <div class="recommended-crops"></div>
+          </div>
+        </div>
+
+        <!-- Add New Crop Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-plus"></i>
+              Add New Crop
+            </div>
+          </div>
+          <form class="crop-form">
+            <div class="form-group">
+              <label for="cropName">Crop Name</label>
+              <input type="text" id="cropName" placeholder="Enter crop name">
+            </div>
+            <div class="form-group">
+              <label for="cropType">Crop Type</label>
+              <input type="text" id="cropType" placeholder="Enter crop type">
+            </div>
+            <div class="form-group">
+              <label for="plantingDate">Planting Date</label>
+              <input type="date" id="plantingDate">
+            </div>
+            <div class="form-group">
+              <label for="expectedHarvest">Expected Harvest</label>
+              <input type="date" id="expectedHarvest">
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">Add Crop</button>
+          </form>
+        </div>
+
+        <!-- Active Crops Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-seedling"></i>
+              Active Crops
+            </div>
+          </div>
+          <div class="crops-list">
+            <div class="crop-item">
+              <div class="crop-info">
+                <div class="crop-name">Tomatoes</div>
+                <div class="crop-growth">
+                  <div class="progress">
+                    <div class="progress-bar" style="width: 75%"></div>
+                  </div>
+                  <span>75% Growth</span>
+                </div>
+              </div>
+              <div class="crop-status">
+                <span class="status-badge healthy">Healthy</span>
+              </div>
+            </div>
+            <div class="crop-item">
+              <div class="crop-info">
+                <div class="crop-name">Potatoes</div>
+                <div class="crop-growth">
+                  <div class="progress">
+                    <div class="progress-bar" style="width: 45%"></div>
+                  </div>
+                  <span>45% Growth</span>
+                </div>
+              </div>
+              <div class="crop-status">
+                <span class="status-badge warning">Mild Disease</span>
+              </div>
+            </div>
+            <div class="crop-item">
+              <div class="crop-info">
+                <div class="crop-name">Carrots</div>
+                <div class="crop-growth">
+                  <div class="progress">
+                    <div class="progress-bar" style="width: 30%"></div>
+                  </div>
+                  <span>30% Growth</span>
+                </div>
+              </div>
+              <div class="crop-status">
+                <span class="status-badge healthy">Healthy</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Crop Analytics Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-chart-pie"></i>
+              Crop Analytics
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="cropAnalyticsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Disease Detection Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-bug"></i>
+              Disease Detection
+            </div>
+          </div>
+          <div class="fault-list">
+            <div class="fault-item">
+              <div class="fault-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <div class="fault-details">
+                <div class="fault-title">Leaf Blight Detected</div>
+                <div class="fault-time">Tomatoes - Field 2</div>
+              </div>
+              <div class="fault-status warning">Warning</div>
+            </div>
+            <div class="fault-item">
+              <div class="fault-icon">
+                <i class="fas fa-exclamation-circle"></i>
+              </div>
+              <div class="fault-details">
+                <div class="fault-title">Root Rot Risk</div>
+                <div class="fault-time">Potatoes - Field 1</div>
+              </div>
+              <div class="fault-status critical">Critical</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fault Page -->
+    <div class="page-content" id="fault-page" style="display: none;">
+      <div class="grid-container">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-exclamation-triangle"></i>
+              System Status and Fault Detection
+            </div>
+          </div>
+          <div class="field-container">
+            <div class="field-content">
+              <!-- Main Pipeline -->
+              <div class="pipeline horizontal" style="top: 30%; left: 10%; width: 80%;"></div>
+              
+              <!-- Vertical Pipelines -->
+              <div class="pipeline vertical" style="top: 30%; left: 25%; height: 40%;"></div>
+              <div class="pipeline vertical" style="top: 30%; left: 50%; height: 40%;"></div>
+              <div class="pipeline vertical" style="top: 30%; left: 75%; height: 40%;"></div>
+
+              <!-- Sensors -->
+              <div class="sensor-node working" data-sensor-id="temp1" style="top: 25%; left: 23%;">
+                <i class="fas fa-thermometer-half"></i>
+              </div>
+              <div class="sensor-node working" data-sensor-id="humidity1" style="top: 45%; left: 23%;">
+                <i class="fas fa-tint"></i>
+              </div>
+              <div class="sensor-node fault" data-sensor-id="moisture1" style="top: 65%; left: 23%;">
+                <i class="fas fa-water"></i>
+              </div>
+              <div class="sensor-node working" data-sensor-id="temp2" style="top: 25%; left: 48%;">
+                <i class="fas fa-thermometer-half"></i>
+              </div>
+              <div class="sensor-node off" data-sensor-id="humidity2" style="top: 45%; left: 48%;">
+                <i class="fas fa-tint"></i>
+              </div>
+              <div class="sensor-node working" data-sensor-id="moisture2" style="top: 65%; left: 48%;">
+                <i class="fas fa-water"></i>
+              </div>
+              <div class="sensor-node working" data-sensor-id="temp3" style="top: 25%; left: 73%;">
+                <i class="fas fa-thermometer-half"></i>
+              </div>
+              <div class="sensor-node working" data-sensor-id="humidity3" style="top: 45%; left: 73%;">
+                <i class="fas fa-tint"></i>
+              </div>
+              <div class="sensor-node working" data-sensor-id="moisture3" style="top: 65%; left: 73%;">
+                <i class="fas fa-water"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-chart-line"></i>
+              System Health Metrics
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="healthChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-exclamation-circle"></i>
+              Fault History
+            </div>
+          </div>
+          <div class="fault-history">
+            <div class="fault-item">
+              <div class="fault-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <div class="fault-details">
+                <div class="fault-title">Moisture Sensor 1 Failure</div>
+                <div class="fault-time">2 hours ago</div>
+              </div>
+              <div class="fault-status critical">Critical</div>
+            </div>
+            <div class="fault-item">
+              <div class="fault-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <div class="fault-details">
+                <div class="fault-title">Humidity Sensor 2 Offline</div>
+                <div class="fault-time">1 hour ago</div>
+              </div>
+              <div class="fault-status warning">Warning</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-info-circle"></i>
+              System Status
+            </div>
+          </div>
+          <div class="status-grid">
+            <div class="status-item">
+              <div class="status-icon">
+                <i class="fas fa-check-circle"></i>
+              </div>
+              <div class="status-info">
+                <div class="status-label">System Health</div>
+                <div class="status-value healthy">Good</div>
+              </div>
+            </div>
+            <div class="status-item">
+              <div class="status-icon">
+                <i class="fas fa-exclamation-circle"></i>
+              </div>
+              <div class="status-info">
+                <div class="status-label">Active Alerts</div>
+                <div class="status-value warning">2</div>
+              </div>
+            </div>
+            <div class="status-item">
+              <div class="status-icon">
+                <i class="fas fa-wifi"></i>
+              </div>
+              <div class="status-info">
+                <div class="status-label">Network Status</div>
+                <div class="status-value healthy">Connected</div>
+              </div>
+            </div>
+            <div class="status-item">
+              <div class="status-icon">
+                <i class="fas fa-battery-three-quarters"></i>
+              </div>
+              <div class="status-info">
+                <div class="status-label">Battery Level</div>
+                <div class="status-value healthy">75%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Irrigation Page -->
+    <div class="page-content" id="irrigation-page" style="display: none;">
+      <div class="grid-container">
+        <div class="card field-layout">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-title">
+              <i class="fas fa-tint"></i>
+              Field Irrigation Control
+            </div>
+            <button id="motorBtn" class="btn btn-danger">
+              <i class="fas fa-power-off me-2"></i>
+              Turn Motor ON
+            </button>
+          </div>
+          <div class="field-container">
+            <div class="field-content">
+              <!-- Main Pipeline -->
+              <div class="pipeline horizontal" style="top: 30%; left: 10%; width: 80%;"></div>
+              
+              <!-- Vertical Pipelines -->
+              <div class="pipeline vertical" style="top: 30%; left: 25%; height: 40%;"></div>
+              <div class="pipeline vertical" style="top: 30%; left: 50%; height: 40%;"></div>
+              <div class="pipeline vertical" style="top: 30%; left: 75%; height: 40%;"></div>
+
+              <!-- Solenoid Valves -->
+              <div class="solenoid-valve" data-valve-id="1" style="top: 28%; left: 23%;">
+                <i class="fas fa-faucet"></i>
+                <div class="valve-label">Valve 1</div>
+              </div>
+              <div class="solenoid-valve" data-valve-id="2" style="top: 28%; left: 48%;">
+                <i class="fas fa-faucet"></i>
+                <div class="valve-label">Valve 2</div>
+              </div>
+              <div class="solenoid-valve" data-valve-id="3" style="top: 28%; left: 73%;">
+                <i class="fas fa-faucet"></i>
+                <div class="valve-label">Valve 3</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <i class="fas fa-chart-line"></i>
+                  Water Flow Rate
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="flowRateChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <i class="fas fa-tint"></i>
+                  Water Level
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="irrigationWaterLevelChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mobile-menu">
+    <i class="fas fa-bars"></i>
+  </div>
+
+  <script>
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('theme-toggle');
+    const body = document.body;
+    
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = body.getAttribute('data-theme');
+      if (currentTheme === 'dark') {
+        body.removeAttribute('data-theme');
+        themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+      } else {
+        body.setAttribute('data-theme', 'dark');
+        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+      }
+    });
+
+    // Mobile menu functionality
+    const mobileMenu = document.querySelector('.mobile-menu');
+    const sidebar = document.querySelector('.sidebar');
+    
+    mobileMenu.addEventListener('click', () => {
+      sidebar.classList.toggle('show');
+    });
+
+    // Socket.io connection
+    const socket = io();
+
+    // Motor control
+    const motorBtn = document.getElementById('motorToggleBtn');
+    const motorStatus = document.getElementById('motorStatus');
+    let isMotorOn = false;
+
+    motorBtn.addEventListener('click', () => {
+      isMotorOn = !isMotorOn;
+      socket.emit('toggleMotor');
+      updateMotorUI();
+    });
+
+    socket.on('motorStatus', (status) => {
+      isMotorOn = status;
+      updateMotorUI();
+    });
+
+    function updateMotorUI() {
+      // Update main motor button
+      motorBtn.innerHTML = `<i class="fas fa-power-off me-2"></i> Turn Motor ${isMotorOn ? 'OFF' : 'ON'}`;
+      motorBtn.className = `btn ${isMotorOn ? 'btn-success' : 'btn-danger'}`;
+      
+      // Update motor status indicator
+      const statusDot = motorStatus.querySelector('.status-dot');
+      const statusText = motorStatus.querySelector('span');
+      
+      statusDot.className = `status-dot ${isMotorOn ? 'active' : 'inactive'}`;
+      statusText.textContent = `Motor is currently ${isMotorOn ? 'ON' : 'OFF'}`;
+
+      // Update irrigation page motor button if it exists
+      const irrigationMotorBtn = document.getElementById('motorBtn');
+      if (irrigationMotorBtn) {
+        irrigationMotorBtn.innerHTML = `<i class="fas fa-power-off me-2"></i> Turn Motor ${isMotorOn ? 'OFF' : 'ON'}`;
+        irrigationMotorBtn.className = `btn ${isMotorOn ? 'btn-success' : 'btn-danger'}`;
+      }
+    }
+
+    // Valve controls
+    const valveControls = document.querySelectorAll('.valve-control');
+    valveControls.forEach(valve => {
+      valve.addEventListener('click', function() {
+        const status = this.querySelector('.status-dot');
+        const text = this.querySelector('.status span');
+        const isActive = status.classList.contains('active');
+        
+        status.className = `status-dot ${isActive ? 'inactive' : 'active'}`;
+        text.textContent = isActive ? 'Closed' : 'Open';
+      });
+    });
+
+    // Sensor data chart
+    const ctx = document.getElementById('sensorChart').getContext('2d');
+    const sensorChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Temperature',
+          borderColor: '#2196F3',
+          data: [],
+          fill: false
+        }, {
+          label: 'Humidity',
+          borderColor: '#4CAF50',
+          data: [],
+          fill: false
+        }, {
+          label: 'Moisture',
+          borderColor: '#FFC107',
+          data: [],
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-primary')
+            }
+          }
+        },
+        elements: {
+          point: {
+            radius: 0
+          },
+          line: {
+            tension: 0.4
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: getComputedStyle(document.body).getPropertyValue('--border-color')
+            },
+            ticks: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+            }
+          },
+          x: {
+            grid: {
+              color: getComputedStyle(document.body).getPropertyValue('--border-color')
+            },
+            ticks: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+            }
+          }
+        }
+      }
+    });
+
+    // Update sensor values with random data
+    function updateSensorValues() {
+      const tempValue = document.getElementById('tempValue');
+      const humValue = document.getElementById('humValue');
+      const moistValue = document.getElementById('moistValue');
+      const waterValue = document.getElementById('waterValue');
+
+      const updateValues = () => {
+        const data = {
+          temperature: Math.random() * 20 + 15,
+          humidity: Math.random() * 30 + 40,
+          moisture: Math.random() * 30 + 50,
+          waterLevel: Math.random() * 20 + 60
+        };
+
+        tempValue.textContent = data.temperature.toFixed(1);
+        humValue.textContent = data.humidity.toFixed(1);
+        moistValue.textContent = data.moisture.toFixed(1);
+        waterValue.textContent = data.waterLevel.toFixed(1);
+
+        // Update chart
+        const now = new Date().toLocaleTimeString();
+        sensorChart.data.labels.push(now);
+        sensorChart.data.datasets[0].data.push(data.temperature);
+        sensorChart.data.datasets[1].data.push(data.humidity);
+        sensorChart.data.datasets[2].data.push(data.moisture);
+
+        if (sensorChart.data.labels.length > 10) {
+          sensorChart.data.labels.shift();
+          sensorChart.data.datasets.forEach(dataset => dataset.data.shift());
+        }
+
+        sensorChart.update('active');
+      };
+
+      updateValues();
+      setInterval(updateValues, 2000);
+    }
+
+    // Initialize sensor values
+    updateSensorValues();
+
+    // Update chart colors on theme change
+    themeToggle.addEventListener('click', () => {
+      const textColor = getComputedStyle(document.body).getPropertyValue('--text-primary');
+      const borderColor = getComputedStyle(document.body).getPropertyValue('--border-color');
+      
+      sensorChart.options.plugins.legend.labels.color = textColor;
+      sensorChart.options.scales.y.grid.color = borderColor;
+      sensorChart.options.scales.x.grid.color = borderColor;
+      sensorChart.options.scales.y.ticks.color = textColor;
+      sensorChart.options.scales.x.ticks.color = textColor;
+      
+      sensorChart.update();
+    });
+
+    // Navigation functionality
+    function showPage(pageId) {
+      // Hide all pages
+      document.querySelectorAll('.page-content').forEach(page => {
+        page.style.display = 'none';
+      });
+      
+      // Show selected page
+      document.getElementById(pageId).style.display = 'block';
+      
+      // Update active state in navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+        });
+      
+      // Find and activate the corresponding nav item
+      const navItem = document.querySelector(`[data-page="${pageId}"]`);
+      if (navItem) {
+        navItem.classList.add('active');
+      }
+    }
+
+    // Add click handlers to navigation items
+    document.querySelectorAll('.nav-item').forEach(item => {
+      const pageId = item.getAttribute('data-page');
+      if (pageId) {
+        item.addEventListener('click', (e) => {
+          e.preventDefault();
+          showPage(pageId);
+        });
+      }
+    });
+
+    // Initialize page visibility
+    document.addEventListener('DOMContentLoaded', () => {
+      showPage('overview-page');
+    });
+
+    // Initialize irrigation charts
+    const flowRateChart = new Chart(document.getElementById('flowRateChart'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Flow Rate',
+          borderColor: '#2196F3',
+          data: [],
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-primary')
+            }
+          }
+        },
+        elements: {
+          point: {
+            radius: 0
+          },
+          line: {
+            tension: 0.4
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: getComputedStyle(document.body).getPropertyValue('--border-color')
+            },
+            ticks: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+            }
+          },
+          x: {
+            grid: {
+              color: getComputedStyle(document.body).getPropertyValue('--border-color')
+            },
+            ticks: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+            }
+          }
+        }
+      }
+    });
+
+    const irrigationWaterLevelChart = new Chart(document.getElementById('irrigationWaterLevelChart'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Water Level',
+          borderColor: '#4CAF50',
+          data: [],
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-primary')
+            }
+          }
+        },
+        elements: {
+          point: {
+            radius: 0
+          },
+          line: {
+            tension: 0.4
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: getComputedStyle(document.body).getPropertyValue('--border-color')
+            },
+            ticks: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+            }
+          },
+          x: {
+            grid: {
+              color: getComputedStyle(document.body).getPropertyValue('--border-color')
+            },
+            ticks: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+            }
+          }
+        }
+      }
+    });
+
+    // Initialize health chart
+    const healthChart = new Chart(document.getElementById('healthChart'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'System Health',
+          borderColor: '#4CAF50',
+          data: [],
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-primary')
+            }
+          }
+        },
+        elements: {
+          point: {
+            radius: 0
+          },
+          line: {
+            tension: 0.4
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: getComputedStyle(document.body).getPropertyValue('--border-color')
+            },
+            ticks: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+            }
+          },
+          x: {
+            grid: {
+              color: getComputedStyle(document.body).getPropertyValue('--border-color')
+            },
+            ticks: {
+              color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+            }
+          }
+        }
+      }
+    });
+
+    // Update irrigation charts
+    function updateIrrigationCharts() {
+      const now = new Date().toLocaleTimeString();
+      const data = {
+        flowRate: Math.random() * 10 + 5,
+        waterLevel: Math.random() * 20 + 60
+      };
+
+      [
+        { chart: flowRateChart, value: data.flowRate },
+        { chart: irrigationWaterLevelChart, value: data.waterLevel }
+      ].forEach(({ chart, value }) => {
+        chart.data.labels.push(now);
+        chart.data.datasets[0].data.push(value);
+
+        if (chart.data.labels.length > 10) {
+          chart.data.labels.shift();
+          chart.data.datasets[0].data.shift();
+        }
+
+        chart.update('active');
+      });
+    }
+
+    // Update health chart
+    function updateHealthChart() {
+      const now = new Date().toLocaleTimeString();
+      const healthValue = Math.random() * 20 + 80; // Health between 80-100%
+
+      healthChart.data.labels.push(now);
+      healthChart.data.datasets[0].data.push(healthValue);
+
+      if (healthChart.data.labels.length > 10) {
+        healthChart.data.labels.shift();
+        healthChart.data.datasets[0].data.shift();
+      }
+
+      healthChart.update('active');
+    }
+
+    // Initialize data updates for irrigation and health
+    setInterval(() => {
+      if (document.getElementById('irrigation-page').style.display !== 'none') {
+        updateIrrigationCharts();
+      }
+      if (document.getElementById('fault-page').style.display !== 'none') {
+        updateHealthChart();
+      }
+    }, 2000);
+
+    // Valve control functionality
+    document.querySelectorAll('.solenoid-valve').forEach(valve => {
+      valve.addEventListener('click', function() {
+        this.classList.toggle('active');
+        const valveId = this.getAttribute('data-valve-id');
+        const isActive = this.classList.contains('active');
+        console.log(`Valve ${valveId} is now ${isActive ? 'open' : 'closed'}`);
+      });
+    });
+
+    // Initialize tracking page charts
+    const analysisCharts = {
+      temp: new Chart(document.getElementById('tempAnalysisChart'), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Temperature',
+            borderColor: '#2196F3',
+            data: [],
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-primary')
+              }
+            }
+          },
+          elements: {
+            point: {
+              radius: 0
+            },
+            line: {
+              tension: 0.4
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: getComputedStyle(document.body).getPropertyValue('--border-color')
+              },
+              ticks: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+              }
+            },
+            x: {
+              grid: {
+                color: getComputedStyle(document.body).getPropertyValue('--border-color')
+              },
+              ticks: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+              }
+            }
+          }
+        }
+      }),
+      hum: new Chart(document.getElementById('humAnalysisChart'), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Humidity',
+            borderColor: '#4CAF50',
+            data: [],
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-primary')
+              }
+            }
+          },
+          elements: {
+            point: {
+              radius: 0
+            },
+            line: {
+              tension: 0.4
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: getComputedStyle(document.body).getPropertyValue('--border-color')
+              },
+              ticks: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+              }
+            },
+            x: {
+              grid: {
+                color: getComputedStyle(document.body).getPropertyValue('--border-color')
+              },
+              ticks: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+              }
+            }
+          }
+        }
+      }),
+      moist: new Chart(document.getElementById('moistAnalysisChart'), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Soil Moisture',
+            borderColor: '#FFC107',
+            data: [],
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-primary')
+              }
+            }
+          },
+          elements: {
+            point: {
+              radius: 0
+            },
+            line: {
+              tension: 0.4
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: getComputedStyle(document.body).getPropertyValue('--border-color')
+              },
+              ticks: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+              }
+            },
+            x: {
+              grid: {
+                color: getComputedStyle(document.body).getPropertyValue('--border-color')
+              },
+              ticks: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+              }
+            }
+          }
+        }
+      }),
+      water: new Chart(document.getElementById('waterAnalysisChart'), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Water Level',
+            borderColor: '#9C27B0',
+            data: [],
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-primary')
+              }
+            }
+          },
+          elements: {
+            point: {
+              radius: 0
+            },
+            line: {
+              tension: 0.4
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: getComputedStyle(document.body).getPropertyValue('--border-color')
+              },
+              ticks: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+              }
+            },
+            x: {
+              grid: {
+                color: getComputedStyle(document.body).getPropertyValue('--border-color')
+              },
+              ticks: {
+                color: getComputedStyle(document.body).getPropertyValue('--text-secondary')
+              }
+            }
+          }
+        }
+      })
+    };
+
+    // Initialize crop analytics chart
+    const cropAnalyticsChart = new Chart(document.getElementById('cropAnalyticsChart'), {
+      type: 'pie',
+      data: {
+        labels: ['Healthy', 'Mild Disease', 'Critical'],
+        datasets: [{
+          data: [70, 20, 10],
+          backgroundColor: [
+            'rgba(76, 175, 80, 0.8)',
+            'rgba(255, 193, 7, 0.8)',
+            'rgba(244, 67, 54, 0.8)'
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+
+    // Update tracking page values
+    function updateTrackingValues() {
+      const sensors = ['temp', 'hum', 'moist', 'water'];
+      const now = new Date().toLocaleTimeString();
+
+      sensors.forEach(sensor => {
+        const value = Math.random() * 30 + 20;
+        const chart = analysisCharts[sensor];
+        
+        chart.data.labels.push(now);
+        chart.data.datasets[0].data.push(value);
+
+        if (chart.data.labels.length > 10) {
+          chart.data.labels.shift();
+          chart.data.datasets[0].data.shift();
+        }
+
+        chart.update('active');
+
+        // Update min, max, avg values
+        document.getElementById(`avg${sensor.charAt(0).toUpperCase() + sensor.slice(1)}`).textContent = 
+          (value - 5).toFixed(1);
+        document.getElementById(`max${sensor.charAt(0).toUpperCase() + sensor.slice(1)}`).textContent = 
+          (value + 5).toFixed(1);
+        document.getElementById(`min${sensor.charAt(0).toUpperCase() + sensor.slice(1)}`).textContent = 
+          (value - 10).toFixed(1);
+      });
+    }
+
+    // Update tracking values every 2 seconds if tracking page is visible
+    setInterval(() => {
+      if (document.getElementById('tracking-page').style.display !== 'none') {
+        updateTrackingValues();
+      }
+    }, 2000);
+
+    // Crop prediction functionality
+    document.getElementById('predictionForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // Get form values
+      const formData = {
+        nitrogen: parseFloat(document.getElementById('nitrogen').value),
+        phosphorus: parseFloat(document.getElementById('phosphorus').value),
+        potassium: parseFloat(document.getElementById('potassium').value),
+        temperature: parseFloat(document.getElementById('temperature').value),
+        humidity: parseFloat(document.getElementById('humidity').value),
+        ph: parseFloat(document.getElementById('ph').value),
+        rainfall: parseFloat(document.getElementById('rainfall').value)
+      };
+
+      // Simple rule-based prediction system
+      const recommendations = [];
+      
+      // Rice conditions
+      if (formData.temperature >= 20 && formData.temperature <= 35 &&
+          formData.humidity >= 60 && formData.rainfall >= 100 &&
+          formData.ph >= 5.5 && formData.ph <= 7.5) {
+        recommendations.push({
+          crop: 'Rice',
+          confidence: 85,
+          requirements: 'High water requirement, warm temperature'
+        });
+      }
+
+      // Wheat conditions
+      if (formData.temperature >= 15 && formData.temperature <= 25 &&
+          formData.humidity >= 40 && formData.humidity <= 70 &&
+          formData.ph >= 6.0 && formData.ph <= 7.5) {
+        recommendations.push({
+          crop: 'Wheat',
+          confidence: 80,
+          requirements: 'Moderate water, cool temperature'
+        });
+      }
+
+      // Cotton conditions
+      if (formData.temperature >= 25 && formData.temperature <= 35 &&
+          formData.ph >= 5.5 && formData.ph <= 8.0 &&
+          formData.rainfall >= 60) {
+        recommendations.push({
+          crop: 'Cotton',
+          confidence: 75,
+          requirements: 'Deep soil, warm climate'
+        });
+      }
+
+      // Maize conditions
+      if (formData.temperature >= 20 && formData.temperature <= 30 &&
+          formData.rainfall >= 50 && formData.rainfall <= 100 &&
+          formData.ph >= 5.5 && formData.ph <= 7.5) {
+        recommendations.push({
+          crop: 'Maize',
+          confidence: 82,
+          requirements: 'Well-drained soil, moderate rainfall'
+        });
+      }
+
+      // Display recommendations
+      const resultDiv = document.getElementById('predictionResult');
+      const recommendedCropsDiv = resultDiv.querySelector('.recommended-crops');
+      
+      if (recommendations.length > 0) {
+        recommendedCropsDiv.innerHTML = recommendations.map(rec => `
+          <div class="crop-prediction-item">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h5 class="mb-0">${rec.crop}</h5>
+              <span class="badge bg-success">${rec.confidence}% Match</span>
+            </div>
+            <p class="text-muted mb-0">${rec.requirements}</p>
+          </div>
+        `).join('<hr>');
+        resultDiv.style.display = 'block';
+      } else {
+        recommendedCropsDiv.innerHTML = `
+          <div class="alert alert-warning">
+            No specific crop recommendations found for the given parameters.
+            Consider adjusting the values or consulting with an agricultural expert.
+          </div>
+        `;
+        resultDiv.style.display = 'block';
+      }
+    });
+
+    // Random value generator function
+    function getRandomValue(min, max, decimals = 0) {
+        const value = Math.random() * (max - min) + min;
+        return Number(value.toFixed(decimals));
+    }
+
+    // Fill random values button functionality
+    document.getElementById('fillRandomBtn').addEventListener('click', function() {
+        document.getElementById('nitrogen').value = getRandomValue(0, 140);
+        document.getElementById('phosphorus').value = getRandomValue(0, 140);
+        document.getElementById('potassium').value = getRandomValue(0, 200);
+        document.getElementById('temperature').value = getRandomValue(15, 40, 1);
+        document.getElementById('humidity').value = getRandomValue(30, 90, 1);
+        document.getElementById('ph').value = getRandomValue(5.5, 8.0, 1);
+        document.getElementById('rainfall').value = getRandomValue(50, 200, 1);
+
+        // Trigger form submission to get prediction
+        document.getElementById('predictionForm').dispatchEvent(new Event('submit'));
+    });
+
+    // Show random values button with Ctrl+Shift+R
+    document.addEventListener('keydown', function(event) {
+        if (event.ctrlKey && event.shiftKey && event.key === 'R') {
+            event.preventDefault();
+            const fillRandomBtn = document.getElementById('fillRandomBtn');
+            fillRandomBtn.style.display = fillRandomBtn.style.display === 'none' ? 'block' : 'none';
+        }
+    });
+  </script>
+</body>
+</html>
+
